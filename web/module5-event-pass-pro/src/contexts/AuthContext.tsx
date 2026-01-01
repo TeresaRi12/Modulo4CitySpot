@@ -1,133 +1,43 @@
-// =============================================================================
-// CONTEXTO DE AUTENTICACIÓN - Module 5: EventPass Pro
-// =============================================================================
-// Contexto de React que maneja el estado de autenticación.
-//
-// ## ¿Por qué un Context?
-// El estado de autenticación se necesita en muchos componentes:
-// - Header (mostrar usuario logueado)
-// - Formularios (asociar eventos al usuario)
-// - Páginas protegidas
-//
-// ## Firebase Auth + React Context
-// Firebase maneja la autenticación real.
-// React Context distribuye el estado a toda la app.
-//
-// ## Build Time Safety
-// Durante el build, Firebase puede no estar inicializado.
-// Usamos getFirebaseAuth() para inicialización lazy.
-// =============================================================================
-
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  type ReactNode,
-} from 'react';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithPopup,
-  updateProfile,
-  type User,
-  type Auth,
-} from 'firebase/auth';
-import { getFirebaseAuth } from '@/lib/firebase/config';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase/config';
+import { useRouter } from 'next/navigation';
 
-// =============================================================================
-// TIPOS
-// =============================================================================
-
-/**
- * Usuario autenticado simplificado.
- */
-export interface AuthUser {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-}
-
-/**
- * Estado y métodos del contexto de auth.
- */
 interface AuthContextType {
-  user: AuthUser | null;
+  user: User | null;
   loading: boolean;
-  error: string | null;
-  isConfigured: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signOut: () => Promise<void>;
-  clearError: () => void;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, name: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
-// =============================================================================
-// CONTEXTO
-// =============================================================================
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  signInWithGoogle: async () => { },
+  signInWithEmail: async () => { },
+  registerWithEmail: async () => { },
+  resetPassword: async () => { },
+  logout: async () => { },
+});
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// =============================================================================
-// PROVIDER
-// =============================================================================
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-/**
- * Convierte un User de Firebase a nuestro tipo AuthUser.
- */
-function toAuthUser(user: User): AuthUser {
-  return {
-    uid: user.uid,
-    email: user.email,
-    displayName: user.displayName,
-    photoURL: user.photoURL,
-  };
-}
-
-/**
- * Provider de autenticación.
- *
- * ## onAuthStateChanged
- * Firebase proporciona un observer que se ejecuta cuando:
- * 1. El usuario inicia sesión
- * 2. El usuario cierra sesión
- * 3. Al cargar la página (si hay sesión guardada)
- */
-export function AuthProvider({ children }: AuthProviderProps): React.ReactElement {
-  const [user, setUser] = useState<AuthUser | null>(null);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [auth, setAuth] = useState<Auth | null>(null);
-  const [isConfigured, setIsConfigured] = useState(false);
+  const router = useRouter();
 
-  // Inicializa Firebase Auth en el cliente
   useEffect(() => {
-    const firebaseAuth = getFirebaseAuth();
-    setAuth(firebaseAuth);
-    setIsConfigured(firebaseAuth !== null);
-
-    if (!firebaseAuth) {
-      setLoading(false);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(toAuthUser(firebaseUser));
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user);
+      if (user) {
+        const token = await user.getIdToken();
+        document.cookie = `firebase-auth-token=${token}; path=/; max-age=3600; SameSite=Strict`;
       } else {
-        setUser(null);
+        document.cookie = 'firebase-auth-token=; path=/; max-age=0; SameSite=Strict';
       }
       setLoading(false);
     });
@@ -135,166 +45,75 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     return () => unsubscribe();
   }, []);
 
-  /**
-   * Inicio de sesión con email y contraseña.
-   */
-  const signIn = useCallback(async (email: string, password: string): Promise<void> => {
-    if (!auth) {
-      setError('Firebase no está configurado');
-      return;
-    }
-
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
     try {
-      setError(null);
-      setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al iniciar sesión';
-      setError(translateFirebaseError(message));
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
-
-  /**
-   * Registro con email y contraseña.
-   */
-  const signUp = useCallback(
-    async (email: string, password: string, displayName: string): Promise<void> => {
-      if (!auth) {
-        setError('Firebase no está configurado');
-        return;
-      }
-
-      try {
-        setError(null);
-        setLoading(true);
-        const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
-
-        // Actualizamos el nombre del usuario
-        await updateProfile(newUser, { displayName });
-        setUser(toAuthUser(newUser));
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Error al registrarse';
-        setError(translateFirebaseError(message));
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [auth]
-  );
-
-  /**
-   * Inicio de sesión con Google.
-   */
-  const signInWithGoogle = useCallback(async (): Promise<void> => {
-    if (!auth) {
-      setError('Firebase no está configurado');
-      return;
-    }
-
-    try {
-      setError(null);
-      setLoading(true);
-      const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al iniciar sesión con Google';
-      setError(translateFirebaseError(message));
-      throw err;
-    } finally {
-      setLoading(false);
+      router.push('/events');
+    } catch (error) {
+      console.error('Error signing in with Google', error);
+      throw error;
     }
-  }, [auth]);
+  };
 
-  /**
-   * Cierre de sesión.
-   */
-  const signOut = useCallback(async (): Promise<void> => {
-    if (!auth) {
-      return;
-    }
-
+  const signInWithEmail = async (email: string, password: string) => {
+    const { signInWithEmailAndPassword } = await import('firebase/auth');
     try {
-      setError(null);
-      await firebaseSignOut(auth);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al cerrar sesión';
-      setError(message);
-      throw err;
+      await signInWithEmailAndPassword(auth, email, password);
+      // Cookie is handled by onAuthStateChanged
+      router.push('/events');
+    } catch (error) {
+      console.error('Error signing in with email', error);
+      throw error;
     }
-  }, [auth]);
-
-  /**
-   * Limpia el error actual.
-   */
-  const clearError = useCallback((): void => {
-    setError(null);
-  }, []);
-
-  const value: AuthContextType = {
-    user,
-    loading,
-    error,
-    isConfigured,
-    signIn,
-    signUp,
-    signInWithGoogle,
-    signOut,
-    clearError,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-// =============================================================================
-// HOOK
-// =============================================================================
-
-/**
- * Hook para acceder al contexto de autenticación.
- *
- * @example
- * const { user, signIn, signOut } = useAuth();
- */
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
-
-  if (context === undefined) {
-    throw new Error('useAuth debe usarse dentro de un AuthProvider');
-  }
-
-  return context;
-}
-
-// =============================================================================
-// UTILIDADES
-// =============================================================================
-
-/**
- * Traduce errores de Firebase a mensajes amigables en español.
- */
-function translateFirebaseError(message: string): string {
-  const translations: Record<string, string> = {
-    'auth/email-already-in-use': 'Este email ya está registrado',
-    'auth/invalid-email': 'Email inválido',
-    'auth/operation-not-allowed': 'Operación no permitida',
-    'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres',
-    'auth/user-disabled': 'Esta cuenta ha sido deshabilitada',
-    'auth/user-not-found': 'No existe una cuenta con este email',
-    'auth/wrong-password': 'Contraseña incorrecta',
-    'auth/invalid-credential': 'Credenciales inválidas',
-    'auth/popup-closed-by-user': 'Se cerró la ventana de autenticación',
+  const registerWithEmail = async (email: string, password: string, name: string) => {
+    const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: name });
+      router.push('/events');
+    } catch (error) {
+      console.error('Error registering', error);
+      throw error;
+    }
   };
 
-  // Buscamos el código de error en el mensaje
-  for (const [code, translation] of Object.entries(translations)) {
-    if (message.includes(code)) {
-      return translation;
+  const resetPassword = async (email: string) => {
+    const { sendPasswordResetEmail } = await import('firebase/auth');
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      console.error('Error resetting password', error);
+      throw error;
     }
-  }
+  };
 
-  return message;
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      // Cookie is handled by onAuthStateChanged
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out', error);
+      throw error;
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      signInWithGoogle,
+      signInWithEmail,
+      registerWithEmail,
+      resetPassword,
+      logout
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
+
+export const useAuth = () => useContext(AuthContext);

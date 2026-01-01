@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EventForm } from '@/components/EventForm';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 /**
  * Metadata de la página.
@@ -41,7 +42,9 @@ export default function NewEventPage(): React.ReactElement {
       </Button>
 
       {/* Formulario de creación */}
-      <EventForm />
+      <ProtectedRoute>
+        <EventForm />
+      </ProtectedRoute>
     </div>
   );
 }

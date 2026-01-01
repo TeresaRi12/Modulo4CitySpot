@@ -1,28 +1,33 @@
 // =============================================================================
-// COMPONENTE BUTTON - Shadcn UI
+// COMPONENTE: BUTTON - Shadcn UI
 // =============================================================================
-// Botón con variantes siguiendo el patrón de Shadcn UI.
+// Componente de botón con múltiples variantes y tamaños.
+//
+// ## Class Variance Authority (CVA)
+// CVA es una librería que facilita crear componentes con variantes.
+// Define un conjunto de estilos base y variantes que se combinan.
 // =============================================================================
 
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
-
 import { cn } from '@/lib/utils';
 
 /**
- * Definición de variantes del botón usando CVA.
+ * Variantes del botón usando CVA.
  *
- * ## class-variance-authority (CVA)
- * CVA permite definir variantes de componentes de forma type-safe.
- * Es el patrón que usa Shadcn UI para manejar estilos condicionales.
+ * ## ¿Cómo funciona CVA?
+ * 1. Define estilos base que siempre se aplican
+ * 2. Define variantes con opciones (default, destructive, etc.)
+ * 3. Define tamaños
+ * 4. Combina todo automáticamente según las props
  */
 const buttonVariants = cva(
-  // Estilos base (siempre aplicados)
+  // Estilos base que siempre se aplican
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
-      // Variante de estilo visual
+      // Variantes de estilo visual
       variant: {
         default: 'bg-primary text-primary-foreground hover:bg-primary/90',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
@@ -31,7 +36,7 @@ const buttonVariants = cva(
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
       },
-      // Variante de tamaño
+      // Variantes de tamaño
       size: {
         default: 'h-10 px-4 py-2',
         sm: 'h-9 rounded-md px-3',
@@ -39,7 +44,7 @@ const buttonVariants = cva(
         icon: 'h-10 w-10',
       },
     },
-    // Valores por defecto
+    // Valores por defecto si no se especifican
     defaultVariants: {
       variant: 'default',
       size: 'default',
@@ -48,16 +53,13 @@ const buttonVariants = cva(
 );
 
 /**
- * Props del botón.
+ * Props del componente Button.
  *
  * ## asChild Pattern
- * El prop `asChild` permite que el botón se renderice como otro componente.
- * Útil para crear links que parecen botones:
- *
- * @example
- * <Button asChild>
- *   <Link href="/events">Ver eventos</Link>
- * </Button>
+ * Cuando asChild es true, el Button renderiza su hijo directo
+ * en lugar de un <button>. Útil para:
+ * - Links que parecen botones: <Button asChild><Link href="/">Home</Link></Button>
+ * - Componentes personalizados que necesitan estilos de botón
  */
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -66,13 +68,29 @@ export interface ButtonProps
 }
 
 /**
- * Componente Button con variantes y soporte para polimorfismo.
+ * Componente Button reutilizable con variantes.
+ *
+ * @example
+ * // Botón por defecto
+ * <Button>Click me</Button>
+ *
+ * // Botón destructivo grande
+ * <Button variant="destructive" size="lg">Eliminar</Button>
+ *
+ * // Botón como link
+ * <Button asChild>
+ *   <Link to="/about">Sobre nosotros</Link>
+ * </Button>
  */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
-    // Si asChild es true, usamos Slot para renderizar el hijo directo
+    // Si asChild es true, usamos Slot que renderiza el hijo
+    // Si no, renderizamos un button normal
     const Comp = asChild ? Slot : 'button';
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+
+    return (
+      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+    );
   }
 );
 Button.displayName = 'Button';

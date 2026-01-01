@@ -1,179 +1,92 @@
-// =============================================================================
-// COMPONENTE LOGIN FORM - Module 5: EventPass Pro
-// =============================================================================
-// Formulario de inicio de sesión y registro.
-// =============================================================================
-
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import Link from 'next/link';
 
-/**
- * Formulario de autenticación con tabs para login/registro.
- */
-export function LoginForm(): React.ReactElement {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export function LoginForm() {
+  const { signInWithGoogle, signInWithEmail } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const { signIn, signUp, signInWithGoogle, error, clearError } = useAuth();
-  const router = useRouter();
-
-  /**
-   * Handler del formulario.
-   */
-  async function handleSubmit(e: React.FormEvent): Promise<void> {
-    e.preventDefault();
-    setIsSubmitting(true);
-    clearError();
-
+  const handleGoogleLogin = async () => {
     try {
-      if (isLogin) {
-        await signIn(email, password);
-      } else {
-        await signUp(email, password, displayName);
-      }
-      router.push('/');
-    } catch {
-      // El error ya se maneja en el contexto
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  /**
-   * Login con Google.
-   */
-  async function handleGoogleSignIn(): Promise<void> {
-    setIsSubmitting(true);
-    clearError();
-
-    try {
+      setIsLoading(true);
+      setError('');
       await signInWithGoogle();
-      router.push('/');
-    } catch {
-      // El error ya se maneja en el contexto
-    } finally {
-      setIsSubmitting(false);
+    } catch (error: any) {
+      setError('Error al iniciar con Google');
+      setIsLoading(false);
     }
-  }
+  };
 
-  /**
-   * Cambiar entre login y registro.
-   */
-  function toggleMode(): void {
-    setIsLogin(!isLogin);
-    clearError();
-  }
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    try {
+      await signInWithEmail(email, password);
+    } catch (error: any) {
+      if (error.code === 'auth/invalid-credential') {
+        setError('Credenciales incorrectas');
+      } else {
+        setError('Error al iniciar sesión');
+      }
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <Card className="mx-auto w-full max-w-md">
-      <CardHeader>
-        <CardTitle>{isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}</CardTitle>
-        <CardDescription>
-          {isLogin
-            ? 'Ingresa tus credenciales para acceder'
-            : 'Completa el formulario para registrarte'}
-        </CardDescription>
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl font-bold">Bienvenido de nuevo</CardTitle>
+        <CardDescription>Ingresa tus credenciales para continuar</CardDescription>
       </CardHeader>
-
-      <CardContent>
-        {/* Error message */}
-        {error && (
-          <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
+      <CardContent className="space-y-4">
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Nombre (solo registro) */}
-          {!isLogin && (
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Nombre</Label>
-              <Input
-                id="displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Tu nombre"
-                required={!isLogin}
-                disabled={isSubmitting}
-              />
+          <div className="space-y-2">
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input id="email" name="email" type="email" placeholder="tu@email.com" required />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Contraseña</Label>
+              <Link href="/auth/forgot-password" className="text-xs text-primary hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
-          )}
-
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-              required
-              disabled={isSubmitting}
-            />
+            <Input id="password" name="password" type="password" required />
           </div>
 
-          {/* Contraseña */}
-          <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              minLength={6}
-              disabled={isSubmitting}
-            />
-          </div>
+          {error && <p className="text-sm text-destructive font-medium text-center">{error}</p>}
 
-          {/* Submit button */}
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isLogin ? 'Iniciando sesión...' : 'Registrando...'}
-              </>
-            ) : isLogin ? (
-              'Iniciar Sesión'
-            ) : (
-              'Registrarse'
-            )}
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            Iniciar Sesión
           </Button>
         </form>
 
-        {/* Divider */}
-        <div className="relative my-6">
+        <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">O continúa con</span>
+            <span className="bg-background px-2 text-muted-foreground">O continúa con</span>
           </div>
         </div>
 
-        {/* Google sign in */}
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={handleGoogleSignIn}
-          disabled={isSubmitting}
-        >
-          <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+        <Button variant="outline" className="w-full gap-2" onClick={handleGoogleLogin} disabled={isLoading}>
+          <svg viewBox="0 0 24 24" className="w-4 h-4">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
               fill="#4285F4"
@@ -193,20 +106,15 @@ export function LoginForm(): React.ReactElement {
           </svg>
           Google
         </Button>
-
-        {/* Toggle mode */}
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}{' '}
-          <button
-            type="button"
-            onClick={toggleMode}
-            className="text-primary hover:underline"
-            disabled={isSubmitting}
-          >
-            {isLogin ? 'Regístrate' : 'Inicia sesión'}
-          </button>
-        </p>
       </CardContent>
+      <CardFooter className="flex justify-center">
+        <p className="text-sm text-muted-foreground">
+          ¿No tienes una cuenta?{' '}
+          <Link href="/auth/register" className="text-primary hover:underline font-medium">
+            Regístrate
+          </Link>
+        </p>
+      </CardFooter>
     </Card>
   );
 }

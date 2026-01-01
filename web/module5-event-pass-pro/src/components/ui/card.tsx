@@ -1,7 +1,16 @@
 // =============================================================================
-// COMPONENTE CARD - Shadcn UI
+// COMPONENTE: CARD - Shadcn UI
 // =============================================================================
-// Componente de tarjeta con subcomponentes para estructura flexible.
+// Sistema de tarjetas compuesto por múltiples componentes.
+//
+// ## Compound Components Pattern
+// Card usa el patrón de componentes compuestos:
+// - Card (contenedor)
+// - CardHeader, CardTitle, CardDescription (cabecera)
+// - CardContent (contenido)
+// - CardFooter (pie)
+//
+// Esto da flexibilidad para componer diferentes layouts.
 // =============================================================================
 
 import * as React from 'react';
@@ -34,9 +43,9 @@ CardHeader.displayName = 'CardHeader';
 /**
  * Título de la tarjeta.
  */
-const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
+const CardTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <h3
+    <div
       ref={ref}
       className={cn('text-2xl font-semibold leading-none tracking-tight', className)}
       {...props}
@@ -46,14 +55,13 @@ const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTML
 CardTitle.displayName = 'CardTitle';
 
 /**
- * Descripción de la tarjeta.
+ * Descripción/subtítulo de la tarjeta.
  */
-const CardDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
-));
+const CardDescription = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
+  )
+);
 CardDescription.displayName = 'CardDescription';
 
 /**
@@ -67,7 +75,7 @@ const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
 CardContent.displayName = 'CardContent';
 
 /**
- * Pie de la tarjeta.
+ * Pie de la tarjeta (acciones, botones, etc.).
  */
 const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (

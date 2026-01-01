@@ -1,27 +1,12 @@
-// =============================================================================
-// PÁGINA DE AUTENTICACIÓN - Module 5: EventPass Pro
-// =============================================================================
-// Página de login y registro.
-// =============================================================================
-
-import type { Metadata } from 'next';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { Suspense } from 'react';
 
-/**
- * Metadata de la página.
- */
-export const metadata: Metadata = {
-  title: 'Iniciar Sesión',
-  description: 'Accede a tu cuenta de EventPass Pro',
-};
-
-/**
- * Página de autenticación.
- */
-export default function AuthPage(): React.ReactElement {
+export default function AuthPage() {
   return (
-    <div className="container mx-auto flex min-h-[70vh] items-center justify-center px-4 py-8">
-      <LoginForm />
+    <div className="container flex items-center justify-center min-h-[calc(100vh-200px)] py-10">
+      <Suspense fallback={<div>Cargando...</div>}>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }

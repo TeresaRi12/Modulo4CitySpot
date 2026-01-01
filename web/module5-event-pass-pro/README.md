@@ -211,6 +211,13 @@ module5-event-pass-pro/
    - **Firestore Database**: Base de datos NoSQL
    - **Storage** (opcional): Para almacenar imagenes de posters
 
+### Security
+
+By default, we use standard Firestore and Storage rules requiring authentication for writes.
+
+### Firestore Indexes
+If you encounter a `FAILED_PRECONDITION` error related to indexes, check the browser console. Firestore usually provides a direct link to create the required compound index in your Firebase Console. This is common when filtering events by multiple fields (e.g., status + date).
+
 ### 2. Configurar Authentication
 
 1. Firebase Console → Authentication → Sign-in method

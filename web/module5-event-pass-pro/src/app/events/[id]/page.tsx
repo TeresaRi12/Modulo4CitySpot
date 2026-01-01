@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RegisterButton } from '@/components/RegisterButton';
-import { DeleteEventButton } from '@/components/DeleteEventButton';
+import { EventOwnerActions } from '@/components/EventOwnerActions';
 import { getEventById } from '@/data/events';
 import { CATEGORY_LABELS, STATUS_LABELS } from '@/types/event';
 import { formatDate, formatPrice, getAvailableSpots, isEventPast } from '@/lib/utils';
@@ -91,16 +91,12 @@ export default async function EventDetailPage({
           </Link>
         </Button>
 
-        {/* Botones de editar y eliminar */}
-        <div className="flex gap-2">
-          <Button asChild variant="outline" className="gap-2">
-            <Link href={`/events/${event.id}/edit`}>
-              <Pencil className="h-4 w-4" />
-              Editar
-            </Link>
-          </Button>
-          <DeleteEventButton eventId={event.id} eventTitle={event.title} />
-        </div>
+        {/* Botones de editar y eliminar (Solo owner) */}
+        <EventOwnerActions
+          eventId={event.id}
+          eventTitle={event.title}
+          organizerId={event.organizerId}
+        />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -235,7 +231,7 @@ export default async function EventDetailPage({
                     <p className="text-sm text-muted-foreground">
                       {Math.round(
                         (new Date(event.endDate).getTime() - new Date(event.date).getTime()) /
-                          (1000 * 60 * 60)
+                        (1000 * 60 * 60)
                       )}{' '}
                       horas
                     </p>

@@ -20,6 +20,7 @@ import { formatShortDate, formatPrice, getAvailableSpots } from '@/lib/utils';
 
 interface EventCardProps {
   event: Event;
+  currentUserId?: string;
 }
 
 /**
@@ -31,7 +32,7 @@ interface EventCardProps {
  * - Badges de categoría y estado
  * - Footer con precio y acción
  */
-export function EventCard({ event }: EventCardProps): React.ReactElement {
+export function EventCard({ event, currentUserId }: EventCardProps): React.ReactElement {
   const availableSpots = getAvailableSpots(event.capacity, event.registeredCount);
   const isSoldOut = availableSpots === 0;
   const isAvailable = event.status === 'publicado' && !isSoldOut;
@@ -111,9 +112,16 @@ export function EventCard({ event }: EventCardProps): React.ReactElement {
 
       <CardFooter className="flex items-center justify-between">
         <p className="text-lg font-bold text-primary">{formatPrice(event.price)}</p>
-        <Button asChild variant={isAvailable ? 'default' : 'secondary'} size="sm">
-          <Link href={`/events/${event.id}`}>{isAvailable ? 'Ver detalles' : 'Ver evento'}</Link>
-        </Button>
+        <div className="flex gap-2">
+          {currentUserId && currentUserId === event.organizerId && (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/events/${event.id}/edit`}>Editar</Link>
+            </Button>
+          )}
+          <Button asChild variant={isAvailable ? 'default' : 'secondary'} size="sm">
+            <Link href={`/events/${event.id}`}>{isAvailable ? 'Ver detalles' : 'Ver evento'}</Link>
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );

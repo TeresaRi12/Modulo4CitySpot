@@ -1,15 +1,16 @@
 // =============================================================================
-// COMPONENTE LABEL - Shadcn UI
+// COMPONENTE: LABEL - Shadcn UI
 // =============================================================================
-// Etiqueta accesible para campos de formulario.
+// Componente de etiqueta accesible usando Radix UI.
+//
+// ## Radix UI
+// Radix UI proporciona primitivos de UI accesibles y sin estilos.
+// Shadcn UI los estiliza con Tailwind CSS.
 // =============================================================================
-
-'use client';
 
 import * as React from 'react';
 import * as LabelPrimitive from '@radix-ui/react-label';
 import { cva, type VariantProps } from 'class-variance-authority';
-
 import { cn } from '@/lib/utils';
 
 /**
@@ -20,14 +21,21 @@ const labelVariants = cva(
 );
 
 /**
- * Componente Label basado en Radix UI.
+ * Componente Label accesible.
  *
- * ## ¿Por qué Radix UI?
- * Radix UI proporciona primitivas accesibles.
- * El Label de Radix maneja correctamente la asociación con inputs.
+ * ## Accesibilidad
+ * - Se conecta automáticamente con inputs via htmlFor
+ * - Soporta click para enfocar el input asociado
+ * - Estados de disabled heredados del input hermano (peer-disabled)
+ *
+ * @example
+ * <div>
+ *   <Label htmlFor="email">Correo electrónico</Label>
+ *   <Input id="email" type="email" />
+ * </div>
  */
 const Label = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
+  React.ComponentRef<typeof LabelPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & VariantProps<typeof labelVariants>
 >(({ className, ...props }, ref) => (
   <LabelPrimitive.Root ref={ref} className={cn(labelVariants(), className)} {...props} />

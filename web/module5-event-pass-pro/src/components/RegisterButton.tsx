@@ -45,16 +45,27 @@ export function RegisterButton({
   isAvailable,
 }: RegisterButtonProps): React.ReactElement {
   /**
-   * useTransition permite marcar actualizaciones como no urgentes.
-   * isPending indica si hay una transición en progreso.
+   * ## useTransition Hook
+   * Permite marcar una actualización de estado como una transición ("no urgente").
+   * 
+   * **¿Por qué usarlo aquí?**
+   * Al envolver la llamada al Server Action en `startTransition`, le decimos a React
+   * que la UI puede seguir respondiendo mientras se procesa la acción en el servidor.
+   * `isPending` nos permite mostrar un indicador de carga durante este proceso.
    */
   const [isPending, startTransition] = useTransition();
 
   /**
-   * useOptimistic crea un estado optimista.
+   * ## useOptimistic Hook (React 19)
+   * Crea un estado que puede actualizarse inmediatamente mientras se espera
+   * la confirmación del servidor.
+   * 
+   * **Concepto Clave**: "Optimistic UI" asume que la operación tendrá éxito y
+   * muestra el resultado final al usuario instantáneamente. Si la operación falla,
+   * React revierte automáticamente al estado real.
    *
-   * @param initialValue - Valor inicial (plazas disponibles)
-   * @param reducer - Función que calcula el nuevo valor optimista
+   * @param initialValue - Valor real actual (viniendo de props/servidor)
+   * @param reducer - Función que calcula el nuevo estado cuando se aplica una acción optimista
    */
   const [optimisticSpots, addOptimistic] = useOptimistic(
     availableSpots,
@@ -70,17 +81,17 @@ export function RegisterButton({
    * Handler del registro.
    */
   async function handleRegister(): Promise<void> {
-    // 1. Actualización optimista inmediata
-    addOptimistic('register');
-
-    // 2. Ejecutar Server Action en una transición
+    // 1. Ejecutar Server Action en una transición
     startTransition(async () => {
+      // 2. Actualización optimista DENTRO de la transición (o justo antes si es síncrono, pero el error sugería moverlo)
+      // La documentación de React 19 sugiere llamar a setOptimistic dentro de una transición o acción.
+      addOptimistic('register');
+
       const result = await registerForEventAction(eventId);
 
       if (!result.success) {
-        // Si falla, podríamos mostrar un toast de error
-        // El estado optimista se revierte automáticamente
         console.error('Error al registrar:', result.message);
+        // Aquí podríamos mostrar un toast error
       }
     });
   }

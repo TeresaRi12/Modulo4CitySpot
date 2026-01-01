@@ -14,6 +14,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EventForm } from '@/components/EventForm';
 import { getEventById } from '@/data/events';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 /**
  * Props de la pagina con params dinamicos.
@@ -68,7 +69,9 @@ export default async function EditEventPage({
       </Button>
 
       {/* Formulario de edicion */}
-      <EventForm event={event} mode="edit" />
+      <ProtectedRoute>
+        <EventForm event={event} mode="edit" />
+      </ProtectedRoute>
     </div>
   );
 }

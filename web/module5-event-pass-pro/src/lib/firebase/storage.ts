@@ -15,7 +15,7 @@
 // =============================================================================
 
 import { getStorage } from 'firebase-admin/storage';
-import adminApp from './admin';
+import { adminApp } from './admin';
 
 /**
  * Bucket de Firebase Storage.

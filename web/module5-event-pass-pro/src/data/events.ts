@@ -13,311 +13,78 @@
 // =============================================================================
 
 import type { Event, EventFilters } from '@/types/event';
-import { generateId, delay } from '@/lib/utils';
+import { getEvents as getEventsFirestore, getEventById as getEventByIdFirestore, createEvent as createEventFirestore, updateEvent as updateEventFirestore, deleteEvent as deleteEventFirestore } from '@/lib/firebase/firestore';
 
-// =============================================================================
-// DATOS INICIALES (SEED)
-// =============================================================================
-
-/**
- * Eventos de ejemplo para desarrollo.
- */
-const initialEvents: Event[] = [
-  {
-    id: generateId(),
-    title: 'Conferencia de Desarrollo Web 2025',
-    description:
-      'Únete a los mejores expertos en desarrollo web para explorar las últimas tendencias en React, Next.js y tecnologías frontend. Incluye talleres prácticos y sesiones de networking.',
-    category: 'conferencia',
-    status: 'publicado',
-    date: '2025-02-15T09:00:00.000Z',
-    endDate: '2025-02-15T18:00:00.000Z',
-    location: 'Centro de Convenciones Madrid',
-    address: 'Paseo de la Castellana 99, 28046 Madrid',
-    capacity: 500,
-    registeredCount: 342,
-    price: 150,
-    imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-    organizerName: 'TechEvents España',
-    organizerEmail: 'info@techevents.es',
-    tags: ['react', 'nextjs', 'frontend', 'javascript'],
-    createdAt: '2024-12-01T10:00:00.000Z',
-    updatedAt: '2024-12-20T15:30:00.000Z',
-  },
-  {
-    id: generateId(),
-    title: 'Taller de React Server Components',
-    description:
-      'Aprende a construir aplicaciones modernas con React Server Components y Server Actions. Taller práctico de 4 horas con ejercicios hands-on y código real.',
-    category: 'taller',
-    status: 'publicado',
-    date: '2025-01-28T10:00:00.000Z',
-    endDate: '2025-01-28T14:00:00.000Z',
-    location: 'Campus Google Madrid',
-    address: 'Calle Moreno Nieto 2, 28005 Madrid',
-    capacity: 30,
-    registeredCount: 28,
-    price: 75,
-    imageUrl: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800',
-    organizerName: 'React Madrid',
-    organizerEmail: 'hola@reactmadrid.dev',
-    tags: ['react', 'server-components', 'hands-on'],
-    createdAt: '2024-12-10T09:00:00.000Z',
-    updatedAt: '2024-12-22T11:00:00.000Z',
-  },
-  {
-    id: generateId(),
-    title: 'Networking Tech & Startups',
-    description:
-      'Evento de networking para profesionales tech y fundadores de startups. Conoce a inversores, desarrolladores y emprendedores en un ambiente distendido con bebidas y aperitivos.',
-    category: 'networking',
-    status: 'publicado',
-    date: '2025-01-20T19:00:00.000Z',
-    endDate: '2025-01-20T22:00:00.000Z',
-    location: 'WeWork Castellana',
-    address: 'Paseo de la Castellana 77, 28046 Madrid',
-    capacity: 100,
-    registeredCount: 67,
-    price: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800',
-    organizerName: 'Madrid Tech Community',
-    organizerEmail: 'eventos@madridtech.io',
-    tags: ['networking', 'startups', 'tech'],
-    createdAt: '2024-12-05T14:00:00.000Z',
-    updatedAt: '2024-12-18T16:45:00.000Z',
-  },
-  {
-    id: generateId(),
-    title: 'Concierto Sinfónico de Año Nuevo',
-    description:
-      'La Orquesta Filarmónica celebra el año nuevo con un repertorio clásico que incluye obras de Strauss, Beethoven y Mozart. Una velada mágica en el auditorio más prestigioso de la ciudad.',
-    category: 'concierto',
-    status: 'publicado',
-    date: '2025-01-05T20:00:00.000Z',
-    endDate: '2025-01-05T22:30:00.000Z',
-    location: 'Auditorio Nacional',
-    address: 'Calle Príncipe de Vergara 146, 28002 Madrid',
-    capacity: 2300,
-    registeredCount: 1850,
-    price: 45,
-    imageUrl: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=800',
-    organizerName: 'Fundación Musical Madrid',
-    organizerEmail: 'conciertos@fundacionmusical.es',
-    tags: ['música', 'clásica', 'orquesta'],
-    createdAt: '2024-11-15T08:00:00.000Z',
-    updatedAt: '2024-12-28T09:00:00.000Z',
-  },
-  {
-    id: generateId(),
-    title: 'Exposición: Arte Digital y NFTs',
-    description:
-      'Explora la intersección entre arte y tecnología en esta exposición inmersiva. Descubre obras de artistas digitales pioneros y aprende sobre el futuro del arte en la era blockchain.',
-    category: 'exposicion',
-    status: 'publicado',
-    date: '2025-02-01T10:00:00.000Z',
-    endDate: '2025-03-15T20:00:00.000Z',
-    location: 'Museo de Arte Contemporáneo',
-    address: 'Calle Santa Isabel 52, 28012 Madrid',
-    capacity: 200,
-    registeredCount: 45,
-    price: 12,
-    imageUrl: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800',
-    organizerName: 'Museo de Arte Contemporáneo',
-    organizerEmail: 'exposiciones@mac.es',
-    tags: ['arte', 'digital', 'nft', 'tecnología'],
-    createdAt: '2024-12-01T12:00:00.000Z',
-    updatedAt: '2024-12-20T14:00:00.000Z',
-  },
-  {
-    id: generateId(),
-    title: 'Hackathon IA para el Bien Social',
-    description:
-      'Hackathon de 48 horas enfocado en crear soluciones de inteligencia artificial para problemas sociales. Premios de hasta 10.000€ para los mejores proyectos. Comida y bebida incluidas.',
-    category: 'otro',
-    status: 'borrador',
-    date: '2025-03-22T09:00:00.000Z',
-    endDate: '2025-03-24T18:00:00.000Z',
-    location: 'Impact Hub Madrid',
-    address: 'Calle Alameda 22, 28014 Madrid',
-    capacity: 150,
-    registeredCount: 0,
-    price: 25,
-    imageUrl: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800',
-    organizerName: 'AI Spain',
-    organizerEmail: 'hackathon@aispain.org',
-    tags: ['hackathon', 'ia', 'social', 'premios'],
-    createdAt: '2024-12-26T10:00:00.000Z',
-    updatedAt: '2024-12-26T10:00:00.000Z',
-  },
-];
-
-// =============================================================================
-// ALMACÉN EN MEMORIA
-// =============================================================================
-
-/**
- * Array mutable que actúa como "base de datos".
- * Se inicializa con los eventos de ejemplo.
- */
-const events: Event[] = [...initialEvents];
-
-// =============================================================================
-// FUNCIONES DE ACCESO A DATOS
-// =============================================================================
-
-/**
- * Obtiene todos los eventos con filtros opcionales.
- *
- * @param filters - Filtros a aplicar
- * @returns Lista de eventos filtrados
- */
 export async function getEvents(filters?: EventFilters): Promise<Event[]> {
-  // Simulamos latencia de red/base de datos
-  await delay(300);
-
-  let result = [...events];
-
-  if (filters) {
-    // Filtro por búsqueda de texto
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      result = result.filter(
-        (event) =>
-          event.title.toLowerCase().includes(searchLower) ||
-          event.description.toLowerCase().includes(searchLower) ||
-          event.location.toLowerCase().includes(searchLower) ||
-          event.tags.some((tag) => tag.toLowerCase().includes(searchLower))
-      );
-    }
-
-    // Filtro por categoría
-    if (filters.category) {
-      result = result.filter((event) => event.category === filters.category);
-    }
-
-    // Filtro por estado
-    if (filters.status) {
-      result = result.filter((event) => event.status === filters.status);
-    }
-
-    // Filtro por rango de fechas
-    if (filters.dateFrom) {
-      result = result.filter((event) => new Date(event.date) >= new Date(filters.dateFrom!));
-    }
-
-    if (filters.dateTo) {
-      result = result.filter((event) => new Date(event.date) <= new Date(filters.dateTo!));
-    }
-
-    // Filtro por precio máximo
-    if (filters.priceMax !== undefined) {
-      result = result.filter((event) => event.price <= filters.priceMax!);
-    }
-  }
-
-  // Ordenar por fecha (próximos primero)
-  return result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  return getEventsFirestore(filters?.status);
 }
 
-/**
- * Obtiene un evento por su ID.
- *
- * @param id - ID del evento
- * @returns El evento o null si no existe
- */
 export async function getEventById(id: string): Promise<Event | null> {
-  await delay(200);
-  return events.find((event) => event.id === id) ?? null;
+  return getEventByIdFirestore(id);
 }
 
-/**
- * Crea un nuevo evento.
- *
- * @param data - Datos del evento (sin id ni timestamps)
- * @returns El evento creado
- */
 export async function createEvent(
   data: Omit<Event, 'id' | 'registeredCount' | 'createdAt' | 'updatedAt'>
 ): Promise<Event> {
-  await delay(500);
-
-  const now = new Date().toISOString();
-  const newEvent: Event = {
+  // Provide default values for required fields that are not in 'data'
+  // id, createdAt, updatedAt are handled by Firestore/utility
+  const eventData = {
     ...data,
-    id: generateId(),
     registeredCount: 0,
-    createdAt: now,
-    updatedAt: now,
+    // Optional fields should be handled if missing in data
   };
-
-  events.push(newEvent);
-  return newEvent;
+  return createEventFirestore(eventData as any);
 }
 
-/**
- * Actualiza un evento existente.
- *
- * @param id - ID del evento
- * @param data - Datos a actualizar
- * @returns El evento actualizado o null si no existe
- */
 export async function updateEvent(
   id: string,
-  data: Partial<Omit<Event, 'id' | 'createdAt'>>
+  data: Partial<Omit<Event, 'id' | 'createdAt'>>,
+  userId?: string
 ): Promise<Event | null> {
-  await delay(400);
+  const event = await getEventByIdFirestore(id);
+  if (!event) return null;
 
-  const index = events.findIndex((event) => event.id === id);
-  if (index === -1) return null;
+  // Check ownership if userId is provided
+  if (userId && event.organizerId !== userId) {
+    throw new Error('Unauthorized');
+  }
 
-  events[index] = {
-    ...events[index],
-    ...data,
-    updatedAt: new Date().toISOString(),
-  };
-
-  return events[index];
+  return updateEventFirestore(id, data as any);
 }
 
-/**
- * Elimina un evento.
- *
- * @param id - ID del evento
- * @returns true si se eliminó, false si no existía
- */
-export async function deleteEvent(id: string): Promise<boolean> {
-  await delay(300);
+export async function deleteEvent(id: string, userId?: string): Promise<boolean> {
+  const event = await getEventByIdFirestore(id);
+  if (!event) return false;
 
-  const index = events.findIndex((event) => event.id === id);
-  if (index === -1) return false;
+  // Check ownership if userId is provided
+  if (userId && event.organizerId !== userId) {
+    throw new Error('Unauthorized');
+  }
 
-  events.splice(index, 1);
+  await deleteEventFirestore(id);
   return true;
 }
 
-/**
- * Registra un usuario en un evento.
- *
- * @param id - ID del evento
- * @returns El evento actualizado o null si no hay plazas/no existe
- */
-export async function registerForEvent(id: string): Promise<Event | null> {
-  await delay(300);
+export async function registerForEvent(id: string, userId?: string): Promise<Event | null> {
+  if (!userId) throw new Error('User ID required for registration');
 
-  const event = events.find((e) => e.id === id);
-  if (!event) return null;
-  if (event.registeredCount >= event.capacity) return null;
-  if (event.status !== 'publicado') return null;
-
-  event.registeredCount += 1;
-  event.updatedAt = new Date().toISOString();
-
-  return event;
+  try {
+    // Import dynamically to avoid circular dependencies if any, or just use the imported one.
+    // We are already importing from firestore.ts at the top.
+    const { registerForEvent } = await import('@/lib/firebase/firestore');
+    return await registerForEvent(id, userId);
+  } catch (error: any) {
+    if (error.message === 'UserAlreadyRegistered') {
+      throw new Error('Ya estás registrado en este evento');
+    }
+    if (error.message === 'EventFull') {
+      throw new Error('El evento está lleno');
+    }
+    console.error('Registration error:', error);
+    return null;
+  }
 }
 
-/**
- * Obtiene estadísticas generales.
- */
 export async function getEventStats(): Promise<{
   total: number;
   published: number;
@@ -325,8 +92,7 @@ export async function getEventStats(): Promise<{
   totalCapacity: number;
   totalRegistered: number;
 }> {
-  await delay(200);
-
+  const events = await getEventsFirestore();
   const now = new Date();
   const published = events.filter((e) => e.status === 'publicado');
   const upcoming = published.filter((e) => new Date(e.date) > now);
@@ -336,6 +102,6 @@ export async function getEventStats(): Promise<{
     published: published.length,
     upcoming: upcoming.length,
     totalCapacity: events.reduce((sum, e) => sum + e.capacity, 0),
-    totalRegistered: events.reduce((sum, e) => sum + e.registeredCount, 0),
+    totalRegistered: events.reduce((sum, e) => sum + (e.registeredCount || 0), 0),
   };
 }

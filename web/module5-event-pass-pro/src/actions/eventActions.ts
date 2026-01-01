@@ -1,47 +1,3 @@
-// =============================================================================
-// SERVER ACTIONS - Module 4: Event Pass
-// =============================================================================
-// Server Actions son funciones que se ejecutan en el servidor pero pueden
-// ser invocadas directamente desde componentes del cliente.
-//
-// ## ¿Qué son Server Actions?
-//
-// ```
-// ┌─────────────────────────────────────────────────────────────────────────┐
-// │                      SERVER ACTIONS FLOW                                 │
-// ├─────────────────────────────────────────────────────────────────────────┤
-// │                                                                          │
-// │   CLIENTE                              SERVIDOR                          │
-// │   ┌──────────────────┐                ┌──────────────────┐              │
-// │   │  <form           │   HTTP POST    │  'use server'    │              │
-// │   │    action={...}  │ ─────────────> │  async function  │              │
-// │   │  >               │                │    createEvent() │              │
-// │   └──────────────────┘                └────────┬─────────┘              │
-// │                                                 │                        │
-// │                                                 ▼                        │
-// │   ┌──────────────────┐                ┌──────────────────┐              │
-// │   │  useActionState  │   Serialized   │  Base de datos   │              │
-// │   │  para manejar    │ <───────────── │  o almacén       │              │
-// │   │  estado/errores  │   Response     │                  │              │
-// │   └──────────────────┘                └──────────────────┘              │
-// │                                                                          │
-// └─────────────────────────────────────────────────────────────────────────┘
-// ```
-//
-// ## Ventajas de Server Actions
-// 1. No necesitas crear endpoints API manuales
-// 2. TypeScript end-to-end (tipos compartidos)
-// 3. Validación en servidor automática
-// 4. Integración nativa con formularios HTML
-// 5. Funciona sin JavaScript en el cliente (Progressive Enhancement)
-//
-// ## Reglas importantes
-// - Deben declarar 'use server' al inicio
-// - Solo pueden recibir argumentos serializables
-// - Solo pueden retornar valores serializables
-// - Se ejecutan SIEMPRE en el servidor (seguras para DB/secrets)
-// =============================================================================
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -153,8 +109,8 @@ export async function createEventAction(
     description: formData.get('description') as string,
     category: formData.get('category') as string,
     status: formData.get('status') as string,
-    date: formData.get('date') as string,
-    endDate: (formData.get('endDate') as string) || undefined,
+    date: new Date(formData.get('date') as string).toISOString(),
+    endDate: formData.get('endDate') ? new Date(formData.get('endDate') as string).toISOString() : undefined,
     location: formData.get('location') as string,
     address: formData.get('address') as string,
     capacity: Number(formData.get('capacity')),
@@ -168,11 +124,17 @@ export async function createEventAction(
       .filter(Boolean),
   };
 
-  // Validamos con Zod
+  // ===========================================================================
+  // VALIDACIÓN DE DATOS (Zod)
+  // ===========================================================================
+  // Es CRÍTICO validar los datos en el servidor, no solo en el cliente.
+  // Los Server Actions son endpoints públicos expuestos por Next.js.
+  // Un atacante podría enviar datos malformados directamente a este endpoint a través de cURL o Fetch.
   const validationResult = createEventSchema.safeParse(rawData);
 
   if (!validationResult.success) {
-    // Convertimos errores de Zod a nuestro formato
+    // Si la validación falla, retornamos los errores estructurados al cliente.
+    // Esto permite mostrar mensajes de error específicos debajo de cada campo.
     const errors: Record<string, string[]> = {};
     for (const issue of validationResult.error.issues) {
       const path = issue.path.join('.');
@@ -186,11 +148,15 @@ export async function createEventAction(
       success: false,
       message: 'Por favor, corrige los errores en el formulario',
       errors,
+      payload: rawData, // Retornamos los datos para evitar que el usuario tenga que reescribir todo
     };
   }
 
   // Creamos el evento en la "base de datos"
-  const event = await createEventInDb(validationResult.data);
+  const event = await createEventInDb({
+    ...validationResult.data,
+    organizerId: auth.uid
+  });
 
   // Revalidamos la caché de la página de eventos
   // Esto fuerza a Next.js a regenerar las páginas que muestran eventos
@@ -241,10 +207,10 @@ export async function updateEventAction(
   if (status) rawData.status = status;
 
   const date = formData.get('date') as string;
-  if (date) rawData.date = date;
+  if (date) rawData.date = new Date(date).toISOString();
 
   const endDate = formData.get('endDate') as string;
-  if (endDate) rawData.endDate = endDate;
+  if (endDate) rawData.endDate = new Date(endDate).toISOString();
 
   const location = formData.get('location') as string;
   if (location) rawData.location = location;
@@ -292,15 +258,16 @@ export async function updateEventAction(
       success: false,
       message: 'Por favor, corrige los errores en el formulario',
       errors,
+      payload: rawData, // Return payload to keep form state
     };
   }
 
-  const event = await updateEventInDb(id, validationResult.data as Partial<CreateEventInput>);
+  const event = await updateEventInDb(id, validationResult.data as Partial<CreateEventInput>, auth.uid);
 
   if (!event) {
     return {
       success: false,
-      message: 'No se encontró el evento a actualizar',
+      message: 'No se encontró el evento a actualizar o no tienes permisos',
     };
   }
 
@@ -339,12 +306,12 @@ export async function deleteEventAction(id: string): Promise<FormState> {
 
   // TODO: En producción, verificar que auth.uid es el dueño del evento
 
-  const deleted = await deleteEventInDb(id);
+  const deleted = await deleteEventInDb(id, auth.uid);
 
   if (!deleted) {
     return {
       success: false,
-      message: 'No se encontró el evento a eliminar',
+      message: 'No se encontró el evento a eliminar o no tienes permisos',
     };
   }
 
@@ -369,20 +336,33 @@ export async function deleteEventAction(id: string): Promise<FormState> {
  * @param id - ID del evento
  */
 export async function registerForEventAction(id: string): Promise<FormState> {
-  const event = await registerInDb(id);
-
-  if (!event) {
-    return {
-      success: false,
-      message: 'No se pudo completar el registro. El evento puede estar lleno o no disponible.',
-    };
+  // 1. Validar autenticación
+  const auth = await validateAuth();
+  if (!auth) {
+    return authError();
   }
 
-  revalidatePath(`/events/${id}`);
+  try {
+    const event = await registerInDb(id, auth.uid);
 
-  return {
-    success: true,
-    message: '¡Te has registrado correctamente!',
-    data: event,
-  };
+    if (!event) {
+      return {
+        success: false,
+        message: 'No se pudo completar el registro. Intenta de nuevo.',
+      };
+    }
+
+    revalidatePath(`/events/${id}`);
+
+    return {
+      success: true,
+      message: '¡Te has registrado correctamente!',
+      data: event,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Error al registrarse',
+    };
+  }
 }

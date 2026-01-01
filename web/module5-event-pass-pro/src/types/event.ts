@@ -148,6 +148,7 @@ export interface FormState {
   message: string;
   errors?: Record<string, string[]>;
   data?: Event;
+  payload?: any;
 }
 
 /**
