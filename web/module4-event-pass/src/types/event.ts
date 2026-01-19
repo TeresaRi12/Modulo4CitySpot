@@ -75,7 +75,7 @@ export const STATUS_LABELS: Record<EventStatus, string> = {
 const datetimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{3})?)?([+-]\d{2}:\d{2}|Z)?$/;
 
 export const eventSchema = z.object({
-  id: z.string().cuid2(),
+  id: z.string(),
   title: z
     .string()
     .min(5, 'El titulo debe tener al menos 5 caracteres')

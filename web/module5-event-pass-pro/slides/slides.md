@@ -63,11 +63,13 @@ Evolving EventPass with cloud services and AI.
 │                              │                                   │
 │   SERVER                     ▼                                   │
 │   ┌─────────────────────────────────────────────────────────┐   │
-│   │  Server Actions        │        API Routes               │   │
-│   │  (Firestore CRUD)      │    (/api/generate-description)  │   │
-│   │       │                │              │                  │   │
-│   │       ▼                │              ▼                  │   │
-│   │  Firebase Admin        │         Gemini AI               │   │
+│   │                    Server Actions                        │   │
+│   │  ┌────────────────────┐    ┌────────────────────┐       │   │
+│   │  │  eventActions.ts   │    │  aiActions.ts      │       │   │
+│   │  │  (Firestore CRUD)  │    │  (Gemini AI)       │       │   │
+│   │  └─────────┬──────────┘    └─────────┬──────────┘       │   │
+│   │            ▼                         ▼                  │   │
+│   │     Firebase Admin              @google/genai           │   │
 │   └─────────────────────────────────────────────────────────┘   │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
@@ -500,147 +502,139 @@ service cloud.firestore {
 
 ## Gemini for Content Generation
 
-Use AI to generate event descriptions automatically.
+Use AI to generate event descriptions automatically via Server Actions.
 
 ```typescript
 // lib/gemini.ts
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
-export async function generateEventDescription(input: {
-    title: string;
-    category: string;
-    date: string;
-    location: string;
-}): Promise<string> {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+export const GEMINI_MODELS = {
+    TEXT: 'gemini-3-flash-preview',
+    IMAGE: 'gemini-3-pro-image-preview',
+} as const;
 
-    const prompt = `Generate a compelling event description for:
-        Title: ${input.title}
-        Category: ${input.category}
-        Date: ${input.date}
-        Location: ${input.location}
-
-        Requirements:
-        - 2-3 paragraphs
-        - Professional tone
-        - Include call to action`;
-
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-}
+export const getGeminiClient = () => genAI;
 ```
-
----
-
-## API Route for AI
-
-Protect API key by using a server route.
 
 ```typescript
-// app/api/generate-description/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { generateEventDescription } from '@/lib/gemini';
+// actions/aiActions.ts - Server Action
+'use server';
 
-export async function POST(request: NextRequest) {
-    try {
-        const body = await request.json();
+export async function generateEventDetailsAction(title: string) {
+    const client = getGeminiClient();
+    const result = await client.models.generateContent({
+        model: GEMINI_MODELS.TEXT,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { responseMimeType: 'application/json' }
+    });
+    return { success: true, data: JSON.parse(result.text) };
+}
+```
 
-        if (!body.title || !body.category) {
-            return NextResponse.json(
-                { error: 'Missing required fields' },
-                { status: 400 }
-            );
-        }
+---
 
-        const description = await generateEventDescription(body);
+## Server Actions for AI
 
-        return NextResponse.json({ description });
-    } catch (error) {
-        return NextResponse.json(
-            { error: 'Failed to generate description' },
-            { status: 500 }
-        );
+Server Actions keep API keys secure while providing a simple interface.
+
+```typescript
+// actions/aiActions.ts
+'use server';
+
+import { getGeminiClient, GEMINI_MODELS } from '@/lib/gemini';
+
+export async function generateEventDetailsAction(title: string) {
+    if (!process.env.GEMINI_API_KEY) {
+        return { success: false, error: 'GEMINI_API_KEY not configured' };
     }
+
+    const client = getGeminiClient();
+    const prompt = `Generate event details for: "${title}"...`;
+
+    const result = await client.models.generateContent({
+        model: GEMINI_MODELS.TEXT,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { responseMimeType: 'application/json' }
+    });
+
+    const data = JSON.parse(result.text);
+    return { success: true, data };
 }
 ```
 
----
-
-## Generate Button Component
-
-```tsx
-// components/ai/GenerateDescriptionButton.tsx
-'use client';
-
-import { useState } from 'react';
-
-interface Props {
-    eventData: { title: string; category: string; date: string; location: string };
-    onGenerated: (description: string) => void;
-}
-
-export function GenerateDescriptionButton({ eventData, onGenerated }: Props) {
-    const [loading, setLoading] = useState(false);
-
-    const handleGenerate = async () => {
-        setLoading(true);
-        try {
-            const response = await fetch('/api/generate-description', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(eventData),
-            });
-            const { description } = await response.json();
-            onGenerated(description);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <button onClick={handleGenerate} disabled={loading}>
-            {loading ? 'Generating...' : '✨ Generate with AI'}
-        </button>
-    );
-}
-```
+**Note:** Server Actions are preferred over API Routes for this use case.
 
 ---
 
-## AI in the Event Form
+## Using AI in EventForm
+
+Call Server Actions directly from Client Components.
 
 ```tsx
 // components/EventForm.tsx
 'use client';
 
+import { useState } from 'react';
+import { generateEventDetailsAction } from '@/actions/aiActions';
+
 export function EventForm() {
-    const [description, setDescription] = useState('');
-    const [formData, setFormData] = useState({
-        title: '', category: '', date: '', location: ''
-    });
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleGenerateWithAI = async () => {
+        const title = watch('title');
+        if (!title || title.length < 3) return;
+
+        setIsGenerating(true);
+        try {
+            const result = await generateEventDetailsAction(title);
+            if (result.success && result.data) {
+                setValue('description', result.data.description);
+                setValue('category', result.data.category);
+                setValue('tags', result.data.tags.join(', '));
+            }
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     return (
-        <form action={createEvent}>
-            <input name="title" onChange={...} />
-            <select name="category" onChange={...} />
-            <input type="date" name="date" onChange={...} />
-            <input name="location" onChange={...} />
-
-            <div className="flex gap-2">
-                <textarea
-                    name="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                />
-                <GenerateDescriptionButton
-                    eventData={formData}
-                    onGenerated={setDescription}
-                />
-            </div>
-        </form>
+        <Button onClick={handleGenerateWithAI} disabled={isGenerating}>
+            {isGenerating ? 'Generating...' : '✨ Generate with AI'}
+        </Button>
     );
+}
+```
+
+---
+
+## AI Image Generation
+
+Generate event posters with Gemini 3 Pro Image.
+
+```typescript
+// actions/aiActions.ts
+'use server';
+
+export async function generateEventPosterAction(prompt: string, eventId?: string) {
+    const client = getGeminiClient();
+
+    const result = await client.models.generateContent({
+        model: GEMINI_MODELS.IMAGE, // 'gemini-3-pro-image-preview'
+        contents: [{
+            role: 'user',
+            parts: [{ text: `Create event poster: ${prompt}. 16:9, professional.` }]
+        }]
+    });
+
+    // Extract base64 image from response
+    const part = result.candidates?.[0]?.content?.parts?.[0];
+    const base64Image = part?.inlineData?.data;
+
+    // Upload to Firebase Storage
+    const imageUrl = await uploadPosterToStorage(eventId, base64Image);
+    return { success: true, imageUrl };
 }
 ```
 
@@ -912,8 +906,8 @@ Enhance the AI feature to:
 
 **Files to Modify:**
 - `lib/gemini.ts`
-- `app/api/generate-description/route.ts`
-- `components/ai/GenerateDescriptionButton.tsx`
+- `actions/aiActions.ts`
+- `components/EventForm.tsx`
 
 ---
 

@@ -451,31 +451,33 @@ function PropertyCard() {
 
 ---
 
-## Form Handling
+## Form Handling with React Hook Form
 
-Controlled components for form inputs.
+Uncontrolled forms with validation using React Hook Form + Zod.
 
 ```tsx
-function PropertyForm() {
-    const [formData, setFormData] = useState({
-        title: '',
-        price: '',
-        type: 'house'
+import { useForm } from 'react-hook-form';
+import { createPropertySchema, CreatePropertyInput } from '@/types/property';
+
+function PropertyForm({ onSubmit }: Props) {
+    const { register, handleSubmit, formState: { errors } } = useForm<CreatePropertyInput>({
+        resolver: async (values) => {
+            const result = createPropertySchema.safeParse(values);
+            if (result.success) return { values: result.data, errors: {} };
+
+            const errors = result.error.issues.reduce((acc, issue) => ({
+                ...acc,
+                [issue.path[0]]: { type: issue.code, message: issue.message }
+            }), {});
+            return { values: {}, errors };
+        },
+        defaultValues: { title: '', price: 0, propertyType: 'apartamento' }
     });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        console.log('Submit:', formData);
-    };
-
     return (
-        <form onSubmit={handleSubmit}>
-            <input name="title" value={formData.title} onChange={handleChange} />
+        <form onSubmit={handleSubmit(onSubmit)}>
+            <input {...register('title')} />
+            {errors.title && <p>{errors.title.message}</p>}
             <button type="submit">Save</button>
         </form>
     );
@@ -529,15 +531,14 @@ function App() {
         <BrowserRouter>
             <nav>
                 <Link to="/">Home</Link>
-                <Link to="/properties">Properties</Link>
-                <Link to="/properties/new">Add Property</Link>
+                <Link to="/new">Add Property</Link>
             </nav>
 
             <Routes>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/properties" element={<PropertyList />} />
-                <Route path="/properties/new" element={<PropertyForm />} />
-                <Route path="/properties/:id" element={<PropertyDetail />} />
+                <Route path="/new" element={<NewPropertyPage />} />
+                <Route path="/property/:id" element={<PropertyDetailPage />} />
+                <Route path="*" element={<NotFound />} />
             </Routes>
         </BrowserRouter>
     );
@@ -552,16 +553,18 @@ Access URL parameters in components.
 
 ```tsx
 import { useParams, useNavigate } from 'react-router-dom';
+import { getPropertyById } from '@/lib/storage';
 
-function PropertyDetail() {
+function PropertyDetailPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [property, setProperty] = useState<Property | null>(null);
 
     useEffect(() => {
-        // Fetch property by ID
-        const found = properties.find(p => p.id === id);
-        setProperty(found ?? null);
+        if (id) {
+            const found = getPropertyById(id);
+            setProperty(found);
+        }
     }, [id]);
 
     if (!property) return <p>Property not found</p>;
@@ -569,7 +572,7 @@ function PropertyDetail() {
     return (
         <div>
             <h1>{property.title}</h1>
-            <button onClick={() => navigate(-1)}>Go Back</button>
+            <button onClick={() => navigate('/')}>Go Home</button>
         </div>
     );
 }

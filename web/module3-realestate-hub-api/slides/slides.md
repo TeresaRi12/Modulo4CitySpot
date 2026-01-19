@@ -538,26 +538,27 @@ export async function createProperty(req: Request, res: Response): Promise<void>
 
 ## Controller Pattern
 
-Separate business logic from routing.
+Separate business logic from routing using Repository pattern.
 
 ```typescript
 // controllers/propertyController.ts
-import { Request, Response } from 'express';
-import { prisma } from '../lib/prisma';
+import type { Request, Response } from 'express';
+import { propertyRepository } from '../repositories/propertyRepository';
 
 export async function getAllProperties(req: Request, res: Response): Promise<void> {
-    const { type, maxPrice, city } = req.query;
+    try {
+        const filters: PropertyFilters = {
+            search: req.query.search as string | undefined,
+            propertyType: req.query.propertyType as PropertyFilters['propertyType'],
+            // ... more filters
+        };
 
-    const properties = await prisma.property.findMany({
-        where: {
-            ...(type && { type: String(type) }),
-            ...(maxPrice && { price: { lte: Number(maxPrice) } }),
-            ...(city && { city: { contains: String(city) } })
-        },
-        orderBy: { createdAt: 'desc' }
-    });
+        const properties = await propertyRepository.findAll(filters);
 
-    res.json(properties);
+        res.json({ success: true, data: properties });
+    } catch (error) {
+        res.status(500).json({ success: false, error: { message: 'Error interno' } });
+    }
 }
 ```
 
@@ -566,28 +567,22 @@ export async function getAllProperties(req: Request, res: Response): Promise<voi
 ## Query Parameters Best Practices
 
 ```typescript
-// GET /api/properties?type=house&minPrice=100000&maxPrice=500000&sort=price&order=asc
+// GET /api/properties?propertyType=casa&minPrice=100000&maxPrice=500000&city=Madrid
 
 export async function getAllProperties(req: Request, res: Response): Promise<void> {
-    const {
-        type,
-        minPrice,
-        maxPrice,
-        city,
-        sort = 'createdAt',
-        order = 'desc',
-        limit = '10',
-        offset = '0'
-    } = req.query;
+    const filters: PropertyFilters = {
+        search: req.query.search as string | undefined,
+        propertyType: req.query.propertyType as PropertyFilters['propertyType'],
+        operationType: req.query.operationType as PropertyFilters['operationType'],
+        minPrice: req.query.minPrice ? Number(req.query.minPrice) : undefined,
+        maxPrice: req.query.maxPrice ? Number(req.query.maxPrice) : undefined,
+        minBedrooms: req.query.minBedrooms ? Number(req.query.minBedrooms) : undefined,
+        city: req.query.city as string | undefined,
+    };
 
-    const properties = await prisma.property.findMany({
-        where: buildWhereClause({ type, minPrice, maxPrice, city }),
-        orderBy: { [String(sort)]: order },
-        take: Number(limit),
-        skip: Number(offset)
-    });
+    const properties = await propertyRepository.findAll(filters);
 
-    res.json(properties);
+    res.json({ success: true, data: properties });
 }
 ```
 
@@ -600,23 +595,20 @@ Consistent response structure.
 ```typescript
 // Success response
 {
-    "data": [...],
-    "meta": {
-        "total": 100,
-        "limit": 10,
-        "offset": 0
-    }
+    "success": true,
+    "data": [...]
 }
 
 // Error response
 {
-    "error": "Validation failed",
-    "details": [
-        {
-            "field": "price",
-            "message": "Price must be a positive number"
-        }
-    ]
+    "success": false,
+    "error": {
+        "message": "Datos de entrada inválidos",
+        "code": "VALIDATION_ERROR",
+        "details": [
+            { "path": ["price"], "message": "Price must be positive" }
+        ]
+    }
 }
 ```
 

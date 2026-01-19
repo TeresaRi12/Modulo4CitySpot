@@ -24,7 +24,7 @@ import { generateId, delay } from '@/lib/utils';
  */
 const initialEvents: Event[] = [
   {
-    id: generateId(),
+    id: 'evt-1',
     title: 'Conferencia de Desarrollo Web 2026',
     description:
       'Únete a los mejores expertos en desarrollo web para explorar las últimas tendencias en React, Next.js y tecnologías frontend. Incluye talleres prácticos y sesiones de networking.',
@@ -45,7 +45,7 @@ const initialEvents: Event[] = [
     updatedAt: '2025-12-20T15:30:00.000Z',
   },
   {
-    id: generateId(),
+    id: 'evt-2',
     title: 'Taller de React Server Components',
     description:
       'Aprende a construir aplicaciones modernas con React Server Components y Server Actions. Taller práctico de 4 horas con ejercicios hands-on y código real.',
@@ -66,7 +66,7 @@ const initialEvents: Event[] = [
     updatedAt: '2025-12-22T11:00:00.000Z',
   },
   {
-    id: generateId(),
+    id: 'evt-3',
     title: 'Networking Tech & Startups',
     description:
       'Evento de networking para profesionales tech y fundadores de startups. Conoce a inversores, desarrolladores y emprendedores en un ambiente distendido con bebidas y aperitivos.',
@@ -87,7 +87,7 @@ const initialEvents: Event[] = [
     updatedAt: '2025-12-18T16:45:00.000Z',
   },
   {
-    id: generateId(),
+    id: 'evt-4',
     title: 'Concierto Sinfónico de Año Nuevo',
     description:
       'La Orquesta Filarmónica celebra el año nuevo con un repertorio clásico que incluye obras de Strauss, Beethoven y Mozart. Una velada mágica en el auditorio más prestigioso de la ciudad.',
@@ -108,7 +108,7 @@ const initialEvents: Event[] = [
     updatedAt: '2025-12-28T09:00:00.000Z',
   },
   {
-    id: generateId(),
+    id: 'evt-5',
     title: 'Exposición: Arte Digital y NFTs',
     description:
       'Explora la intersección entre arte y tecnología en esta exposición inmersiva. Descubre obras de artistas digitales pioneros y aprende sobre el futuro del arte en la era blockchain.',
@@ -129,7 +129,7 @@ const initialEvents: Event[] = [
     updatedAt: '2025-12-20T14:00:00.000Z',
   },
   {
-    id: generateId(),
+    id: 'evt-6',
     title: 'Hackathon IA para el Bien Social',
     description:
       'Hackathon de 48 horas enfocado en crear soluciones de inteligencia artificial para problemas sociales. Premios de hasta $10,000 para los mejores proyectos. Comida y bebida incluidas.',

@@ -103,18 +103,18 @@ Interfaces define the structure of objects.
 
 ```typescript
 // types/country.ts
+interface CountryName {
+    common: string;
+    official: string;
+}
+
 interface Country {
-    name: {
-        common: string;
-        official: string;
-    };
-    capital: string[];
+    name: CountryName;
+    cca3: string;               // 3-letter code (ESP, MEX)
+    capital?: string[];         // Optional (some have none)
     population: number;
     region: string;
-    flags: {
-        png: string;
-        svg: string;
-    };
+    flags: { png: string; svg: string };
 }
 ```
 
@@ -263,21 +263,17 @@ const input = document.querySelector('#search') as HTMLInputElement;
 // utils/dom.ts
 export function createElement<K extends keyof HTMLElementTagNameMap>(
     tag: K,
-    options?: {
-        className?: string;
-        textContent?: string;
-        innerHTML?: string;
-    }
+    ...classes: string[]
 ): HTMLElementTagNameMap[K] {
     const element = document.createElement(tag);
-    if (options?.className) element.className = options.className;
-    if (options?.textContent) element.textContent = options.textContent;
-    if (options?.innerHTML) element.innerHTML = options.innerHTML;
+    if (classes.length > 0) {
+        element.classList.add(...classes);
+    }
     return element;
 }
 
 // Usage
-const div = createElement('div', { className: 'card' });
+const div = createElement('div', 'p-4', 'bg-slate-800', 'rounded-lg');
 ```
 
 ---
@@ -446,17 +442,22 @@ Encapsulate API calls in a service module.
 // services/countryApi.ts
 const BASE_URL = 'https://restcountries.com/v3.1';
 
-export async function getAllCountries(): Promise<Country[]> {
-    const response = await fetch(`${BASE_URL}/all`);
-    if (!response.ok) throw new Error('Failed to fetch countries');
+export async function searchCountries(name: string): Promise<Country[]> {
+    const url = `${BASE_URL}/name/${encodeURIComponent(name)}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        if (response.status === 404) return []; // Not found
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
     return response.json();
 }
 
-export async function getCountryByCode(code: string): Promise<Country> {
+export async function getCountryByCode(code: string): Promise<Country | null> {
     const response = await fetch(`${BASE_URL}/alpha/${code}`);
-    if (!response.ok) throw new Error('Country not found');
-    const [country] = await response.json();
-    return country;
+    if (!response.ok) return null;
+    const data = await response.json();
+    return Array.isArray(data) ? data[0] : data;
 }
 ```
 

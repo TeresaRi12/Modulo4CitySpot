@@ -15,7 +15,7 @@
 | TypeScript | 5.9.3 |
 | Tailwind CSS | 4.1.8 |
 | Firebase | 12.7.0 |
-| Firebase Admin | 13.0.2 |
+| Firebase Admin | 13.6.0 |
 | @google/genai | 1.34.0 |
 | Zod | 4.1.9 |
 

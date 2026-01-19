@@ -11,7 +11,7 @@
 | Dependencia | Version | Propósito |
 |-------------|---------|-----------|
 | **React** | 19.2.1 | Biblioteca UI Core |
-| **Vite** | 6.0.0+ | Build tool & Dev Server |
+| **Vite** | 7.3.0 | Build tool & Dev Server |
 | **Tailwind CSS** | 4.1.8 | Framework de estilos (Motor v4) |
 | **Shadcn UI** | Manual | Componentes UI reutilizables |
 | **React Hook Form** | 7.54.2 | Gestión de estado de formularios |
