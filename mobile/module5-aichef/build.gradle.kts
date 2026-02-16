@@ -53,4 +53,7 @@ plugins {
 
     // Kotlin Serialization para parsing de JSON
     alias(libs.plugins.kotlin.serialization) apply false
+
+    // Plugin de KSP (Kotlin Symbol Processing)
+    alias(libs.plugins.ksp) apply false
 }

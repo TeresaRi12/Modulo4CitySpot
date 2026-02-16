@@ -34,7 +34,7 @@ plugins {
     // NOTA: Hilt no se cubrió en clase, se incluye como referencia avanzada.
     // ==========================================================================
     alias(libs.plugins.hilt.android)
-    kotlin("kapt") // Requerido para Hilt
+    alias(libs.plugins.ksp) // Reemplaza a KAPT
 
     // Kotlin Serialization para JSON parsing
     alias(libs.plugins.kotlin.serialization)
@@ -178,7 +178,7 @@ dependencies {
     // El compilador (kapt) genera el código necesario en compile-time.
     // =========================================================================
     implementation(libs.hilt.android)
-    kapt(libs.hilt.android.compiler)
+    ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
 
     // =========================================================================
@@ -199,7 +199,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
 }
 
-// Configuración de KAPT para Hilt
-kapt {
-    correctErrorTypes = true
-}
+// Configuración de KAPT para Hilt (ELIMINADO por MIGRACIÓN A KSP)
+// kapt {
+//    correctErrorTypes = true
+// }
