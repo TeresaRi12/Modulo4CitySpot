@@ -40,6 +40,7 @@ import kotlin.coroutines.resumeWithException
  * =============================================================================
  */
 //MMMMM
+//Manejar errores de cámara de forma estructurada
 sealed class PhotoCaptureError {
     object CameraClosed : PhotoCaptureError()
     object HardwareIssue : PhotoCaptureError()
@@ -115,7 +116,7 @@ class CameraUtils(private val context: Context) {
                         val savedUri = Uri.fromFile(photoFile)
                         continuation.resume(savedUri)
                     }
-
+                    //MMMMM
                     override fun onError(exception: ImageCaptureException) {
                         // Limpieza del archivo fallido
                         if (photoFile.exists()) photoFile.delete()

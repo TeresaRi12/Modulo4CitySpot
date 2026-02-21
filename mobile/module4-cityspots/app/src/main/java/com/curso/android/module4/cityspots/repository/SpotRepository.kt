@@ -174,6 +174,7 @@ class SpotRepository(
      */
     suspend fun createSpot(imageCapture: ImageCapture): CreateSpotResult {
         // 1. Capturar la foto
+        //Manejar, convertir y detener errores o excepciones en resultados controlados algo falla
         val photoUri = try {
             capturePhoto(imageCapture)
         } catch (e: PhotoCaptureException) {
@@ -236,5 +237,6 @@ sealed class CreateSpotResult {
     data class InvalidCoordinates(val message: String) : CreateSpotResult()
 
     //MMMMM
+    //Representar que fallo la creación del Spot por culpa de la foto
     data class PhotoCaptureFailed(val error: PhotoCaptureError) : CreateSpotResult()
 }

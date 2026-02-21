@@ -176,6 +176,7 @@ class MapViewModel(
                         _captureResult.value = false
                     }
 
+                    //nuevo caso
                     is CreateSpotResult.PhotoCaptureFailed -> {
                         _errorMessage.value = when (result.error) {
                             PhotoCaptureError.CameraClosed ->
