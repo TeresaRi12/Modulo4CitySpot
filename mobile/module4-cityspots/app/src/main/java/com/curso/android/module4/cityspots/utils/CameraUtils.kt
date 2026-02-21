@@ -39,6 +39,18 @@ import kotlin.coroutines.resumeWithException
  *
  * =============================================================================
  */
+//MMMMM
+sealed class PhotoCaptureError {
+    object CameraClosed : PhotoCaptureError()
+    object HardwareIssue : PhotoCaptureError()
+    object StorageOrPermissionError : PhotoCaptureError()
+    data class Unknown(val message: String) : PhotoCaptureError()
+}
+//MMMM
+class PhotoCaptureException(
+    val error: PhotoCaptureError
+) : Exception()
+
 class CameraUtils(private val context: Context) {
 
     // Formato para nombres de archivo únicos basados en timestamp
@@ -105,10 +117,26 @@ class CameraUtils(private val context: Context) {
                     }
 
                     override fun onError(exception: ImageCaptureException) {
-                        // Error: propagar excepción
-                        // Limpiar archivo si se creó pero falló la escritura
-                        photoFile.delete()
-                        continuation.resumeWithException(exception)
+                        // Limpieza del archivo fallido
+                        if (photoFile.exists()) photoFile.delete()
+
+                        // --- MAPEADO DE ERRORES (CRITERIO DE ACEPTACIÓN) ---
+                        val specificError = when (exception.imageCaptureError) {
+                            ImageCapture.ERROR_CAMERA_CLOSED ->
+                                PhotoCaptureError.CameraClosed
+
+                            ImageCapture.ERROR_CAPTURE_FAILED ->
+                                PhotoCaptureError.HardwareIssue
+
+                            ImageCapture.ERROR_FILE_IO ->
+                                PhotoCaptureError.StorageOrPermissionError
+
+                            else ->
+                                PhotoCaptureError.Unknown(exception.message ?: "Error desconocido")
+                        }
+
+                        // Retornamos nuestra excepción personalizada con el tipo exacto
+                        continuation.resumeWithException(PhotoCaptureException(specificError))
                     }
                 }
             )

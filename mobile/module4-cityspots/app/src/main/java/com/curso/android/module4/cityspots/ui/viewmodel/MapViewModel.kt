@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.curso.android.module4.cityspots.utils.PhotoCaptureError
 
 /**
  * =============================================================================
@@ -172,6 +173,23 @@ class MapViewModel(
 
                     is CreateSpotResult.InvalidCoordinates -> {
                         _errorMessage.value = result.message
+                        _captureResult.value = false
+                    }
+
+                    is CreateSpotResult.PhotoCaptureFailed -> {
+                        _errorMessage.value = when (result.error) {
+                            PhotoCaptureError.CameraClosed ->
+                                "La cámara se cerró inesperadamente. Intenta nuevamente."
+
+                            PhotoCaptureError.HardwareIssue ->
+                                "Error al capturar la imagen. Verifica la cámara del dispositivo."
+
+                            PhotoCaptureError.StorageOrPermissionError ->
+                                "No se pudo guardar la foto. Revisa el almacenamiento o permisos."
+
+                            is PhotoCaptureError.Unknown ->
+                                "Ocurrió un error inesperado al tomar la foto."
+                        }
                         _captureResult.value = false
                     }
                 }

@@ -9,6 +9,8 @@ import com.curso.android.module4.cityspots.utils.CameraUtils
 import com.curso.android.module4.cityspots.utils.CoordinateValidator
 import com.curso.android.module4.cityspots.utils.LocationUtils
 import kotlinx.coroutines.flow.Flow
+import com.curso.android.module4.cityspots.utils.PhotoCaptureError
+import com.curso.android.module4.cityspots.utils.PhotoCaptureException
 
 /**
  * =============================================================================
@@ -172,7 +174,11 @@ class SpotRepository(
      */
     suspend fun createSpot(imageCapture: ImageCapture): CreateSpotResult {
         // 1. Capturar la foto
-        val photoUri = capturePhoto(imageCapture)
+        val photoUri = try {
+            capturePhoto(imageCapture)
+        } catch (e: PhotoCaptureException) {
+            return CreateSpotResult.PhotoCaptureFailed(e.error)
+        }
 
         // 2. Obtener ubicación actual
         val location = getCurrentLocation()
@@ -228,4 +234,7 @@ sealed class CreateSpotResult {
     data class Success(val spot: SpotEntity) : CreateSpotResult()
     data object NoLocation : CreateSpotResult()
     data class InvalidCoordinates(val message: String) : CreateSpotResult()
+
+    //MMMMM
+    data class PhotoCaptureFailed(val error: PhotoCaptureError) : CreateSpotResult()
 }
