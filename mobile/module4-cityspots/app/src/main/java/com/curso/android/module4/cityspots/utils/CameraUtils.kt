@@ -119,7 +119,7 @@ class CameraUtils(private val context: Context) {
                     override fun onError(exception: ImageCaptureException) {
                         // Limpieza del archivo fallido
                         if (photoFile.exists()) photoFile.delete()
-
+//
                         // --- MAPEADO DE ERRORES (CRITERIO DE ACEPTACIÓN) ---
                         val specificError = when (exception.imageCaptureError) {
                             ImageCapture.ERROR_CAMERA_CLOSED ->
