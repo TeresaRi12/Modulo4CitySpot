@@ -64,6 +64,7 @@ class MapViewModel(
     private val _userLocation = MutableStateFlow<LatLng?>(null)
     val userLocation: StateFlow<LatLng?> = _userLocation.asStateFlow()
 
+    //Lanza una corutina, llama al repositorio y elimina el spot
     fun deleteSpot(spot: SpotEntity) {
         viewModelScope.launch {
             repository.deleteSpot(spot)

@@ -77,6 +77,7 @@ class SpotRepository(
         return spotDao.getAllSpots()
     }
 
+    //Borra el spot complemente (almacenamiento y DB)
     suspend fun deleteSpot(spot: SpotEntity) {
         cameraUtils.deleteImage(Uri.parse(spot.imageUri))
         spotDao.deleteSpot(spot.id)
