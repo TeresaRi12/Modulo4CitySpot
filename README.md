@@ -37,7 +37,7 @@ Lab0 Parte1-Parte2
   Eliminación segura si el archivo no existe.
   Prevención de inconsistencias entre base de datos y almacenamiento.
 
-Link del video: https://youtu.be/Cm5t5fOx54E
+Link del video: https://youtu.be/kzzh1HhMgig
 
 
 Con ayuda de IA pude agilizar parte del proyecto y la documentacion, asi como comprender mejor el funcionamiento de Android, 
