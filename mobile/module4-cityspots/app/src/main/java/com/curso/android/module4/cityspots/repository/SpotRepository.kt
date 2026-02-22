@@ -11,6 +11,9 @@ import com.curso.android.module4.cityspots.utils.LocationUtils
 import kotlinx.coroutines.flow.Flow
 import com.curso.android.module4.cityspots.utils.PhotoCaptureError
 import com.curso.android.module4.cityspots.utils.PhotoCaptureException
+import java.io.File
+
+
 
 /**
  * =============================================================================
@@ -49,6 +52,7 @@ import com.curso.android.module4.cityspots.utils.PhotoCaptureException
  *
  * =============================================================================
  */
+
 class SpotRepository(
     // Dependencias inyectadas por Koin
     private val spotDao: SpotDao,
@@ -73,6 +77,11 @@ class SpotRepository(
         return spotDao.getAllSpots()
     }
 
+    suspend fun deleteSpot(spot: SpotEntity) {
+        cameraUtils.deleteImage(Uri.parse(spot.imageUri))
+        spotDao.deleteSpot(spot.id)
+    }
+
     /**
      * Obtiene un spot específico por ID
      *
@@ -82,6 +91,8 @@ class SpotRepository(
     suspend fun getSpotById(id: Long): SpotEntity? {
         return spotDao.getSpotById(id)
     }
+
+
 
     /**
      * Inserta un nuevo spot en la base de datos

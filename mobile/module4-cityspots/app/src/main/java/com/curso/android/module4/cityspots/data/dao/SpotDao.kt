@@ -45,6 +45,9 @@ interface SpotDao {
     @Query("SELECT * FROM spots ORDER BY timestamp DESC")
     fun getAllSpots(): Flow<List<SpotEntity>>
 
+    //nueva tarea eliminar(suspend y borra room)
+    @Query("DELETE FROM spots WHERE id = :id")
+    suspend fun deleteSpot(id: Long)
     /**
      * Obtiene un spot específico por su ID
      *
